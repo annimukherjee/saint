@@ -89,6 +89,6 @@ class Embedding(nn.Module):
         for i, layer in enumerate(self.num_embedding):
             output.append(layer(x[:, self.no_cat + i].unsqueeze(1).float()))
 
-        data = torch.stack(output, dim=1)  # bs, n, embed_size
+        data = torch.stack(output, dim=1).to(torch.float32)  #   # bs, n, embed_size
 
         return data

@@ -113,8 +113,8 @@ class MultiHeadedAttention(nn.Module):
         
         # 3) "Concat" using a view and apply a final linear. 
         x = x.transpose(1, 2).contiguous().view(
-            nbatches, -1, self.h * self.d_k)          # bs , n , d_model
-        return self.linears[-1](x)                    # bs , n , d_model
+            nbatches, -1, self.h * self.d_k).to(torch.float32)          # bs , n , d_model
+        return self.linears[-1](x).to(torch.float32)                     # bs , n , d_model
     
     
 class EncoderLayer(nn.Module):

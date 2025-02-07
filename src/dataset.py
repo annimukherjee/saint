@@ -25,8 +25,8 @@ class DatasetTabular(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        sample = self.data[idx]
-        label = self.y[idx]
+        sample = self.data[idx].astype(np.float32)  # 
+        label = self.y[idx].astype(np.float32)  # 
 
         return sample, label
 
@@ -36,14 +36,17 @@ class DatasetTabular(Dataset):
         nclasses = len(np.unique(self.y))
         count = np.zeros(nclasses)
         for idx in range(len(self.y)):
-            target = self.y[idx]
+            # target = self.y[idx]
+
+            target = int(self.y[idx].item())
             count[target] += 1
 
         N = float(sum(count))
         weight_per_class = N / count
         weight = np.zeros(len(self))
         for idx in range(len(self.y)):
-            target = self.y[idx]
+            # target = self.y[idx]
+            target = int(self.y[idx].item())
             weight[idx] = weight_per_class[target]
         return weight
     

@@ -30,6 +30,10 @@ class SaintSupLightningModule(pl.LightningModule):
         self.optim = optim                                      # 'adamw'
         self.weight_decay = weight_decay
         self.num_classes = None if num_output == 1 else num_output
+        # self.num_classes = 2 if num_output == 1 else num_output  # Ensure num_classes is set correctly
+
+
+
         self.task = task                                        
         self.cls_token_idx = cls_token_idx
         self.metric=metric
@@ -42,12 +46,57 @@ class SaintSupLightningModule(pl.LightningModule):
     def forward(self, x):
         x = self.embedding(x)
         x = self.transformer(x)
-  
-        out = self.fc(x[:, self.cls_token_idx, :].squeeze())       # BS x embed_dim
+
+        cls_embedding = x[:, self.cls_token_idx, :].squeeze().to(torch.float32)  
+
+        # out = self.fc(cls_embedding).to(torch.float32)       # BS x embed_dim
+
+
+        out = (cls_embedding).to(torch.float32)       # BS x embed_dim
+
         return out
+
+    # def forward(self, x):
+    #     # Obtain the embeddings.
+    #     x = self.embedding(x)
+    #     x = self.transformer(x)
+        
+    #     # Extract the CLS token embedding.
+    #     
+        
+    #     # If the fc layer exists (supervised experiment), apply it.
+    #     if self.fc is not None:
+    #         out = self.fc(cls_embedding).to(torch.float32)
+    #         return out
+        
+    #     else:
+    #         # Otherwise, return the raw embedding.
+    #         return cls_embedding
+        
+    # def forward(self, x):
+    #     # Obtain the embeddings.
+    #     x = self.embedding(x)
+    #     x = self.transformer(x)
+        
+    #     # Extract the CLS token embedding.
+    #     cls_embedding = x[:, self.cls_token_idx, :].squeeze()
+        
+    #     # If the fc layer exists (supervised experiment), apply it.
+    #     if self.fc is not None:
+    #         out = self.fc(cls_embedding).to(torch.float32)
+    #         return out
+    #     else:
+    #         # Otherwise, return the raw embedding.
+    #         return cls_embedding
+
+
     
     def _shared_step(self, batch, metric_fn):
         x, targets = batch
+
+        x = x.to(self.device)  # Move input to the correct device
+        targets = targets.to(self.device)  # Move labels to the correct device
+
         targets = targets.squeeze()
         
         x = self.embedding(x)
@@ -71,6 +120,12 @@ class SaintSupLightningModule(pl.LightningModule):
         return loss
     
     def training_step(self, batch, batch_idx):
+        xi, yi = batch
+        xi = xi.to(self.device)  # Move input to the correct device
+        yi = yi.to(self.device)
+        batch[0] = xi
+        batch[1] = yi
+
         loss = self._shared_step(batch, self.train_metric)
         
         # log the outputs!
@@ -78,21 +133,38 @@ class SaintSupLightningModule(pl.LightningModule):
                  on_epoch=True, prog_bar=True, logger=True)
         return {'loss': loss}
 
-    def training_epoch_end(self, training_step_outputs):
-        self.log(f'train_{self.metric}_epoch', self.train_metric.compute(), prog_bar=True,)
+    # def training_epoch_end(self, training_step_outputs):
+    #     self.log(f'train_{self.metric}_epoch', self.train_metric.compute(), prog_bar=True,)
 
-        # reset after each epoch
+    #     # reset after each epoch
+    #     self.train_metric.reset()
+
+    
+    def on_train_epoch_end(self):
+        self.log(f'train_{self.metric}_epoch', self.train_metric.compute(), prog_bar=True)
+        # Reset the metric after logging it.
         self.train_metric.reset()
 
     def validation_step(self, batch, batch_idx):
+        xi, yi = batch
+        xi = xi.to(self.device)  # Move input to the correct device
+        yi = yi.to(self.device)
+        batch[0] = xi
+        batch[1] = yi
         val_loss = self._shared_step(batch, self.valid_metric)
         
         # log the outputs!
         self.log(f'val_loss', val_loss, on_step=False, 
                  on_epoch=True, prog_bar=True, logger=True)
         
-    def validation_epoch_end(self, validation_step_outputs):
-        self.log(f'val_{self.metric}_epoch', self.valid_metric.compute(), prog_bar=True,)
+    # def validation_epoch_end(self, validation_step_outputs):
+    #     self.log(f'val_{self.metric}_epoch', self.valid_metric.compute(), prog_bar=True,)
+
+    
+    def on_validation_epoch_end(self):
+        self.log(f'val_{self.metric}_epoch', self.valid_metric.compute(), prog_bar=True)
+        # Reset the metric after logging
+        self.valid_metric.reset()
 
         # reset after each epoch
         self.valid_metric.reset()
@@ -104,9 +176,15 @@ class SaintSupLightningModule(pl.LightningModule):
         self.log('test_loss', test_loss, on_step=False, 
                  on_epoch=True, prog_bar=True, logger=True)
     
-    def test_epoch_end(self, test_outs):
-        self.log(f'test_{self.metric}_best_epoch', self.test_metric.compute())
+    # def test_epoch_end(self, test_outs):
+    #     self.log(f'test_{self.metric}_best_epoch', self.test_metric.compute())
 
+    def on_test_epoch_end(self):
+        self.log(f'test_{self.metric}_best_epoch', self.test_metric.compute())
+        # Optionally, reset the test metric if you want to start fresh for the next test run.
+        self.test_metric.reset()
+
+    
     def configure_optimizers(self):
         if self.optim == 'adamw':
             optimizer = torch.optim.AdamW(self.parameters(), 
@@ -167,9 +245,13 @@ class SaintSemiSupLightningModule(pl.LightningModule):
         return x
     
     def _shared_step(self, batch, step):
-        xi, _    = batch                            # xi BS x (n+1)
+        xi , _    = batch                            # xi BS x (n+1)
+        xi = xi.to(self.device)  # Move input to the correct device
+
         pi       =  self.embedding(xi)              # BS x (n+1) x d
         
+
+
         xi_prime = self.cutmix(xi)                 # BS x (n+1)
         xi_prime_embed = self.embedding(xi_prime)   # BS x d x (n+1)
         pi_prime = self.mixup(xi_prime_embed)       # BS x (n+1) x d

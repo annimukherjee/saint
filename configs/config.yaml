@@ -44,19 +44,20 @@ callback:
   auto_insert_metric_name: false
 
 trainer:
-  max_epochs: 100 # default is 100
-  gpus: 0
+  max_epochs: 1 # default is 100
+  accelerator: cpu
+  devices: 1
   deterministic: true
   default_root_dir: null
-  resume_from_checkpoint: null
+  # resume_from_checkpoint: false
 
 dataloader:
   shuffle_val: false
-  train_bs: 32  # [32 256]
+  train_bs: 256  # [32 256]
   val_bs: 32
-  test_bs: 16
+  test_bs: 32
   num_workers: 2
   pin_memory: false
 
 metric: ${optimizer.metric}
-print_config: false
+print_config: true

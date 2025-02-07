@@ -9,13 +9,15 @@ class CutMix:
         self.prob_cutmix = prob_cutmix
 
     def __call__(self, x_i):                                            # x_i # BS x (n+1)
+        device = x_i.device  # Get the device of the input tensor
+        shuffled_index = torch.randperm(x_i.shape[0], device=device)  # Ensure shuffled_index is on the same device
 
-        shuffled_index = torch.randperm(x_i.shape[0])                   # BS
+        # shuffled_index = torch.randperm(x_i.shape[0])                   # BS
         x_a = x_i[shuffled_index]                                       # BS x (n+1)
 
-        prob_matrix = torch.ones(x_i.shape) * (1 - self.prob_cutmix)    # BS x (n+1)
+        prob_matrix = torch.ones(x_i.shape, device=device) * (1 - self.prob_cutmix)    # BS x (n+1)
         
-        m_binary_matrix = torch.empty_like(x_i)                         # BS x (n+1)
+        m_binary_matrix = torch.empty_like(x_i, device=device)                         # BS x (n+1)
         torch.bernoulli(prob_matrix, out=m_binary_matrix)               # BS x (n+1)
         
         xi_cutmix = m_binary_matrix * x_i + (1 - m_binary_matrix) * x_a # BS x (n+1)

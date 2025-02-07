@@ -1,6 +1,6 @@
 model: saint
 task: classification
-pretrained_checkpoint: ?? #nulll
+pretrained_checkpoint: ?? # nulll
 num_output: 1
 
 # parameters for predicting on test set

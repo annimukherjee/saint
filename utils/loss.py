@@ -66,6 +66,8 @@ class DenoisingLoss(nn.Module):
         self.ce = nn.CrossEntropyLoss()
 
     def forward(self, ri_prime, xi):
+        ri_prime = ri_prime.float()
+        xi = xi.float()
         # xi (BS x n+1)
         # ri_prime (BS x n+1 x d)
         denoising_loss = 0.0

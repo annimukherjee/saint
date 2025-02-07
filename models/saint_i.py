@@ -2,6 +2,7 @@
     Saint Paper by Gowthami Somepalli et al. See https://arxiv.org/abs/2106.01342"""
 
 import torch.nn as nn
+import torch
 
 from .transformer import attention, clones
 from .transformer import PositionwiseFeedForward, EncoderLayer, Encoder
@@ -17,7 +18,7 @@ def intersample(query , key , value,dropout=None):
 
     output, _ = attention(query, key ,value)  #1 , b, n*d
     output = output.squeeze(0) #b, n*d
-    output = output.reshape(b, h, n, d) #b,n,d
+    output = output.reshape(b, h, n, d).to(torch.float32)  #b,n,d
 
     return output
 

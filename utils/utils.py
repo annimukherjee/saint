@@ -40,7 +40,17 @@ class Metric:
         return method()
 
     def auroc(self):
-        return AUROC(num_classes=self.num_classes,)
+        # Specify the task (e.g., 'binary' or 'multiclass')
+        # task = 'multiclass' if self.num_classes  else 'binary'
+
+        if self.num_classes:
+            task = 'multiclass'
+        else:
+            task='binary'
+            self.num_classes=2
+
+        return AUROC(num_classes=self.num_classes, task=task)
+        
 
     def acc(self):
         return  Accuracy(num_classes=self.num_classes)

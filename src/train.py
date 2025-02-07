@@ -30,8 +30,10 @@ def setup_experiment(model_dict: dict,
         pt_ckpt = args.experiment.pretrained_checkpoint
         print(f'Initializing supervised task using pretrained model:\n{pt_ckpt}')
         
-        pt_model_ssl = SaintSemiSupLightningModule(**params)
-        pt_model_ssl.load_from_checkpoint(pt_ckpt, **params)
+        # pt_model_ssl = SaintSemiSupLightningModule(**params)
+        # pt_model_ssl.load_from_checkpoint(pt_ckpt, **params)
+
+        pt_model_ssl = SaintSemiSupLightningModule.load_from_checkpoint(pt_ckpt, **params)  # ✅ Correct
         
         # copy weights from pretrained
         model.transformer = copy.deepcopy(pt_model_ssl.transformer)
@@ -43,7 +45,7 @@ def setup_experiment(model_dict: dict,
 
     if experiment == 'supervised' and dataloaders['test_loader'] is not None:
         trainer.test(ckpt_path='best',
-                    test_dataloaders=dataloaders['test_loader'],
+                    dataloaders=dataloaders['test_loader'],
                     )
 
     best_model_ckpt = checkpoint_callback.best_model_path
